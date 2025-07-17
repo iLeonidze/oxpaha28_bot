@@ -708,14 +708,15 @@ async def go_restart(update) -> None:
 
 async def proceed_group_chat_message(update: Update) -> None:
     if (update.effective_message.from_user.id in CONFIG['responsible_persons']) \
-            and update.effective_message.reply_to_message is not None \
-            and update.effective_message.reply_to_message.forward_from_message_id is not None:
-        for user_id, user_data in CONTEXT['users'].items():
-            if user_data.get('requests_history') is not None and update.effective_message.reply_to_message.forward_from_message_id in user_data['requests_history']:
-                message = CONFIG['messages_templates']['received_response_from_responsible_person'] + update.effective_message.text + '\n\n' + update.effective_message.link
-                await BOT.send_message(text=message,
-                                       chat_id=user_id)
-        return
+            and update.effective_message.reply_to_message is not None:
+        orig = getattr(update.effective_message.reply_to_message, "forward_origin", None)
+        if orig and orig.message_id is not None:
+            for user_id, user_data in CONTEXT['users'].items():
+                if user_data.get('requests_history') is not None and orig.message_id in user_data['requests_history']:
+                    message = CONFIG['messages_templates']['received_response_from_responsible_person'] \
+                              + update.effective_message.text + '\n\n' + update.effective_message.link
+                    await BOT.send_message(text=message, chat_id=user_id)
+            return
 
 
 async def proceed_user_message(update: Update, _) -> None:
